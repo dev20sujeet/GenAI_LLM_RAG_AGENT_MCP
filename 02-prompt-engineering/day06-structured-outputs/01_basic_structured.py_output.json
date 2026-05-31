@@ -1,0 +1,54 @@
+(genai-llm-rag-agent-mcp) PS E:\GIT_Repo\GenAI_LLM_RAG_AGENT_MCP> uv run python E:\GIT_Repo\GenAI_LLM_RAG_AGENT_MCP\02-prompt-engineering\day06-structured-outputs\01_basic_structured.py
+Raw JSON returned by the model:
+{
+  "name": "Sujeet Kumar",
+  "age": 41,
+  "occupation": "senior software engineer",
+  "company": "Anthropic"
+}
+
+Typed object: Person(name='Sujeet Kumar', age=41, occupation='senior software engineer', company='Anthropic')
+  .name      = Sujeet Kumar
+  .age       = 41     (type: int)
+  .company   = Anthropic
+
+JSON schema that the model conditioned on:
+{
+  "properties": {
+    "name": {
+      "description": "The person's full name as it appears in the text",
+      "title": "Name",
+      "type": "string"
+    },
+    "age": {
+      "description": "Age in years; integer only",
+      "title": "Age",
+      "type": "integer"
+    },
+    "occupation": {
+      "description": "Their job title or role",
+      "title": "Occupation",
+      "type": "string"
+    },
+    "company": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Employer name if mentioned, otherwise null",
+      "title": "Company"
+    }
+  },
+  "required": [
+    "name",
+    "age",
+    "occupation"
+  ],
+  "title": "Person",
+  "type": "object"
+}

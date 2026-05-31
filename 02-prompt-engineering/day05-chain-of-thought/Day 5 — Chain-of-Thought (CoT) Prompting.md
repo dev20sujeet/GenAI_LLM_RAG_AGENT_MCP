@@ -20,6 +20,58 @@
 
 ---
 
+## 1. Vocabulary
+
+| Term | Concept | Code / API |
+|---|---|---|
+| **Chain-of-Thought (CoT)** | Prompting technique where the model writes intermediate reasoning steps **before** the final answer. ([Wei et al. 2022](https://arxiv.org/abs/2201.11903)) | Add reasoning instructions or exemplars to the prompt |
+| **Reasoning trace** | The intermediate text the model produces while "thinking" — the steps, not the conclusion. | The non-final portion of the model's output |
+| **Trigger phrase** | A short instruction that elicits reasoning without exemplars. The canonical one: *"Let's think step by step."* ([Kojima et al. 2022](https://arxiv.org/abs/2205.11916)) | Appended to the user prompt |
+| **Zero-shot CoT** | CoT with only a trigger phrase, no worked examples. | `prompt + "\nLet's think step by step."` |
+| **Few-shot CoT** | CoT with 1–8 worked examples that demonstrate the reasoning STYLE you want. ([Wei et al. 2022](https://arxiv.org/abs/2201.11903)) | `<exemplars> + <new question>` |
+| **Self-Consistency** | Sample the SAME CoT prompt **N times** at temperature > 0, then majority-vote the final answers. Trades cost for accuracy on hard problems. ([Wang et al. 2022](https://arxiv.org/abs/2203.11171)) | Loop N calls, parse final answer, `Counter.most_common(1)` |
+| **Reasoning model** | A model post-trained (RLHF / RL on verifiable rewards) to produce long internal reasoning automatically — e.g. OpenAI o1/o3, DeepSeek-R1, Gemini 2.5 with thinking on. | `reasoning_effort="high"` (OpenAI), `thinking_budget=N` (Gemini), `thinking={"budget_tokens": N}` (Anthropic) |
+| **Thinking budget** | Token cap on a reasoning model's INTERNAL trace before it answers. `0` = behave like a non-reasoning model. | `types.ThinkingConfig(thinking_budget=0)` |
+| **Trigger-phrase decoding** *(advanced, preview)* | Asking the model what reasoning it WOULD have done, even without prompting it to. Different from CoT but related to "elicitation" research. | Out of scope for Day 5 |
+
+> **Style flag:** The phrase "the model **thinks**" is a metaphor. The real mechanism is autoregressive token generation — each generated token gets attended to in the next forward pass, so writing the reasoning out gives subsequent tokens more relevant context. There is no internal deliberation separate from the visible text (in non-reasoning models). I'll keep using "thinks" because it's natural, but never forget what's actually happening.
+
+---
+
+## 2. What / Why / When
+
+### What it is
+A prompting strategy that asks the model to produce **intermediate reasoning steps** before its final answer, either by including a trigger phrase ("Let's think step by step") or by providing **worked examples** that demonstrate the reasoning style.
+
+### Why it works (the mechanism)
+Three reasons, in increasing depth:
+
+1. **More compute per problem.** A direct answer is ~1–5 output tokens. A reasoning trace is ~50–500. Each token forward-pass uses the full model. More tokens → more compute applied to the problem.
+2. **Externalized state.** Without writing steps down, the model has to hold all intermediates in the residual stream (its internal activation state). Writing them as text moves them into the context window where the next token can attend to them directly.
+3. **Distribution shift toward reasoning.** Training data contains worked solutions on Stack Overflow, textbooks, math forums. When the prompt looks like "here's a problem, let's work through it," the model conditions on that distribution rather than the "here's a problem, here's an answer" distribution (which is sparser and noisier for multi-step problems).
+
+> Wei et al. 2022 originally claimed CoT is an "emergent ability" appearing only in models above ~100B parameters. Subsequent work has nuanced this — smaller models also benefit, just less dramatically. ([Wei et al. 2022, §5.2](https://arxiv.org/abs/2201.11903))
+
+### When to USE CoT
+| Task type | CoT helps? | Why |
+|---|---|---|
+| Multi-step math word problems | Strongly yes | Decomposition + arithmetic verification |
+| Logic puzzles / constraint satisfaction | Strongly yes | Stepwise elimination |
+| Code debugging / root-cause analysis | Yes | "What does this line do? Then what?" |
+| Planning (travel, multi-action) | Yes | Ordering and dependency reasoning |
+| Document Q&A with synthesis | Maybe | Helps when answer requires combining 2+ facts |
+
+### When to SKIP CoT
+| Task type | CoT helps? | Why skip |
+|---|---|---|
+| Sentiment / topic / intent classification | Mostly no | Pattern matching, not reasoning |
+| Factual recall ("capital of France") | No | The answer either is in the weights or isn't |
+| Translation | No / can hurt | Translation isn't multi-step reasoning |
+| Style transfer / paraphrasing | No | Single-pass generation |
+| You're using a reasoning model with `thinking_budget > 0` | **No — redundant** | The model already does internal CoT; prompted CoT can interfere |
+
+> **The big 2024 finding:** Sprague et al. ran a meta-analysis across **100+ task types** and found CoT's accuracy gains were concentrated almost entirely in **math and symbolic reasoning**. On non-symbolic NLP tasks, gains were near zero — but you still paid the 5–10x token cost. ([Sprague et al. 2024, "To CoT or not to CoT?"](https://arxiv.org/abs/2409.12183))
+
 ## 🎬 The Problem
 
 Imagine building a pricing bot. A customer asks:

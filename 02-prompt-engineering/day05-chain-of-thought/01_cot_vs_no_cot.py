@@ -29,7 +29,7 @@ def ask_no_cot(question: str) -> str:
         "No explanation. Just the number (or HH:MM for time questions)."
     )
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-2.5-flash-lite",
         contents=question,
         config=types.GenerateContentConfig(
             system_instruction=system,
@@ -47,7 +47,7 @@ def ask_cot(question: str) -> str:
         "(or 'FINAL ANSWER: HH:MM' for time questions)."
     )
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-2.5-flash-lite",
         contents=question,
         config=types.GenerateContentConfig(
             system_instruction=system,
