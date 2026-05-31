@@ -1,0 +1,7 @@
+[
+  { "id": "q1", "message": "I was charged twice this month" },
+  { "id": "q2", "message": "The app crashes when I open settings" },
+  { "id": "q3", "message": "What are your business hours?" },
+  { "id": "q4", "message": "My subscription renewed but I wanted to cancel" },
+  { "id": "q5", "message": "I can't log in, it says my password is wrong" }
+]
